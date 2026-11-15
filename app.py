@@ -34,20 +34,42 @@ def dl_tiktok():
     url = request.args.get("url")
     if not url: return "No URL", 400
 
-    # I-force ang H.264 (avc) at AAC para siguradong playable sa Android
+    job_id = uuid.uuid4().hex[:8]
+    temp_in = f"/tmp/{job_id}_raw.%(ext)s"
+    final_out = f"/tmp/{job_id}_final.mp4"
+
+    # 1. Limit to 720p max to prevent playback errors on mid-range phones
     ydl_opts = {
-        'outtmpl': '/tmp/tiktok_vid.%(ext)s',
-        'format': 'bestvideo[vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]/best[vcodec^=avc][ext=mp4]/best',
-        'merge_output_format': 'mp4',
+        'outtmpl': temp_in,
+        'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
         'quiet': True,
-        # Inilalagay ang metadata sa unahan para mabilis mag-load sa gallery
-        'postprocessor_args': ['-movflags', '+faststart'], 
+        'merge_output_format': 'mp4'
     }
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.extract_info(url, download=True)
-            return send_file('/tmp/tiktok_vid.mp4', as_attachment=True, download_name="seiji_tiktok.mp4")
+            info = ydl.extract_info(url, download=True)
+            raw_file = ydl.prepare_filename(info)
+            if not os.path.exists(raw_file):
+                raw_file = raw_file.replace('.webm', '.mp4').replace('.mkv', '.mp4')
+
+        # 2. Re-encode with lower bitrate (CRF 28) and scale to exactly 720p
+        # -vf "scale=-2:720" ensures it fits vertically even if it's a horizontal video
+        cmd = [
+            "ffmpeg", "-y", "-i", raw_file,
+            "-vf", "scale=-2:720", 
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", 
+            "-c:a", "aac", "-b:a", "128k", 
+            "-movflags", "+faststart", 
+            final_out
+        ]
+        
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        if os.path.exists(raw_file): os.remove(raw_file)
+        
+        return send_file(final_out, as_attachment=True, download_name="seiji_tiktok.mp4")
+        
     except Exception as e:
         return str(e), 500
 
@@ -68,16 +90,16 @@ def convert_audio():
     file.save(input_path)
 
     try:
-        # Gumamit ng ffmpeg para i-extract ang audio as 320kbps MP3
+        # Standard 192kbps MP3 (high quality pero maliit ang size)
         cmd = [
             "ffmpeg", "-y", "-i", input_path,
-            "-vn", "-ar", "44100", "-ac", "2", "-b:a", "320k", output_path
+            "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", output_path
         ]
         
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         if result.returncode != 0:
-            return jsonify({"ok": False, "err": "FFmpeg failed. The file might be unsupported or corrupted."}), 500
+            return jsonify({"ok": False, "err": "FFmpeg failed. Unsupported format."}), 500
 
         return jsonify({
             "ok": True, 

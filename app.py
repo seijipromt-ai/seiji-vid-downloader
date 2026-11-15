@@ -34,11 +34,14 @@ def dl_tiktok():
     url = request.args.get("url")
     if not url: return "No URL", 400
 
+    # I-force ang H.264 (avc) at AAC para siguradong playable sa Android
     ydl_opts = {
         'outtmpl': '/tmp/tiktok_vid.%(ext)s',
-        'format': 'bestvideo+bestaudio/best',
+        'format': 'bestvideo[vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]/best[vcodec^=avc][ext=mp4]/best',
         'merge_output_format': 'mp4',
-        'quiet': True
+        'quiet': True,
+        # Inilalagay ang metadata sa unahan para mabilis mag-load sa gallery
+        'postprocessor_args': ['-movflags', '+faststart'], 
     }
     
     try:
@@ -58,7 +61,6 @@ def convert_audio():
     if file.filename == '':
         return jsonify({"ok": False, "err": "No selected file"}), 400
 
-    # Generate unique ID for this conversion
     job_id = uuid.uuid4().hex[:8]
     input_path = f"/tmp/{job_id}_input.tmp"
     output_path = f"/tmp/{job_id}_audio.mp3"
@@ -66,20 +68,17 @@ def convert_audio():
     file.save(input_path)
 
     try:
-        # Use ffmpeg to extract audio
+        # Gumamit ng ffmpeg para i-extract ang audio as 320kbps MP3
         cmd = [
             "ffmpeg", "-y", "-i", input_path,
             "-vn", "-ar", "44100", "-ac", "2", "-b:a", "320k", output_path
         ]
         
-        # Run ffmpeg (suppress output to keep server clean)
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         if result.returncode != 0:
             return jsonify({"ok": False, "err": "FFmpeg failed. The file might be unsupported or corrupted."}), 500
 
-        # Instead of sending directly, we return a JSON with the download URL
-        # so the frontend can show the result card first.
         return jsonify({
             "ok": True, 
             "data": {
@@ -91,7 +90,6 @@ def convert_audio():
     except Exception as e:
         return jsonify({"ok": False, "err": str(e)}), 500
     finally:
-        # Cleanup input file
         if os.path.exists(input_path):
             os.remove(input_path)
 
@@ -102,8 +100,6 @@ def dl_converted(job_id):
         return "File not found or expired", 404
     
     return send_file(output_path, as_attachment=True, download_name="seiji_audio.mp3")
-    # Note: We don't delete the output path immediately because send_file needs it.
-    # /tmp is automatically cleared by the OS eventually.
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

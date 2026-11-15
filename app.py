@@ -10,14 +10,17 @@ app = Flask(__name__)
 def index():
     return render_template("index.html")
 
-# --- TIKTOK DOWNLOADER ---
 @app.route("/api/tiktok", methods=["POST"])
 def tiktok_info():
     data = request.get_json()
     url = data.get("url", "").strip()
     if not url: return jsonify({"ok": False, "err": "URL required"}), 400
 
-    ydl_opts = {'quiet': True, 'skip_download': True}
+    ydl_opts = {
+        'quiet': True, 
+        'skip_download': True,
+        'impersonate': 'chrome' # Binago natin para gumana sa TikTok
+    }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -35,41 +38,34 @@ def dl_tiktok():
     if not url: return "No URL", 400
 
     job_id = uuid.uuid4().hex[:8]
-    temp_in = f"/tmp/{job_id}_raw.%(ext)s"
-    final_out = f"/tmp/{job_id}_final.mp4"
+    temp_out = f"/tmp/{job_id}_%(id)s.%(ext)s"
 
-    # 1. Limit to 720p max to prevent playback errors on mid-range phones
+    # HINDI NA TAYO MAG-RERECODE. IPAPAUBRA NATIN SA YT-DLP ANG PAGSASAMA NG VIDEO AT AUDIO.
     ydl_opts = {
-        'outtmpl': temp_in,
-        'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+        'outtmpl': temp_out,
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'quiet': True,
-        'merge_output_format': 'mp4'
+        'merge_output_format': 'mp4',
+        'impersonate': 'chrome',
+        'postprocessor_args': ['-movflags', '+faststart'], 
     }
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
+            
+            # Hanapin ang exact filename na ginawa ni yt-dlp
             raw_file = ydl.prepare_filename(info)
+            
+            # Kung pinalitan ng extension dahil sa merge
             if not os.path.exists(raw_file):
                 raw_file = raw_file.replace('.webm', '.mp4').replace('.mkv', '.mp4')
-
-        # 2. Re-encode with lower bitrate (CRF 28) and scale to exactly 720p
-        # -vf "scale=-2:720" ensures it fits vertically even if it's a horizontal video
-        cmd = [
-            "ffmpeg", "-y", "-i", raw_file,
-            "-vf", "scale=-2:720", 
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", 
-            "-c:a", "aac", "-b:a", "128k", 
-            "-movflags", "+faststart", 
-            final_out
-        ]
-        
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        if os.path.exists(raw_file): os.remove(raw_file)
-        
-        return send_file(final_out, as_attachment=True, download_name="seiji_tiktok.mp4")
-        
+            
+            if os.path.exists(raw_file):
+                return send_file(raw_file, as_attachment=True, download_name="seiji_tiktok.mp4")
+            else:
+                return "Download failed. File not found.", 500
+                
     except Exception as e:
         return str(e), 500
 
@@ -90,7 +86,7 @@ def convert_audio():
     file.save(input_path)
 
     try:
-        # Standard 192kbps MP3 (high quality pero maliit ang size)
+        # Standard extraction. Mabibilis lang ito.
         cmd = [
             "ffmpeg", "-y", "-i", input_path,
             "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", output_path

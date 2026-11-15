@@ -34,7 +34,6 @@
   }
   input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139,92,246,0.2); }
   
-  /* Custom File Upload Button */
   input[type="file"] { display: none; }
   .file-upload-btn {
     display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -89,9 +88,34 @@
   .orb-1 { width: 300px; height: 300px; background: #4c1d95; top: -10%; left: -20%; }
   .orb-2 { width: 250px; height: 250px; background: #0891b2; bottom: 10%; right: -20%; }
 
-  .feature-list { margin-top: 24px; }
-  .feature-item { display: flex; gap: 12px; margin-bottom: 16px; background: var(--panel); padding: 16px; border-radius: 12px; border: 1px solid var(--line); }
-  .feature-icon { color: var(--accent); font-size: 20px; }
+  /* Info Page Styles */
+  .dev-card {
+    background: linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(6,182,212,0.1) 100%);
+    border: 1px solid rgba(139,92,246,0.3); border-radius: 16px;
+    padding: 20px; margin-top: 20px; display: flex; align-items: center; gap: 16px;
+  }
+  .dev-avatar {
+    width: 60px; height: 60px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 800; color: #fff;
+    box-shadow: 0 0 20px rgba(139,92,246,0.5);
+  }
+  .dev-info h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .dev-info p { font-size: 12px; color: #ccc; }
+  .dev-info span { color: var(--cyan); font-weight: 600; }
+
+  .tool-section { margin-top: 24px; }
+  .tool-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-bottom: 12px; font-weight: 700; }
+  .tool-item { 
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; 
+    padding: 16px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center;
+  }
+  .tool-icon { font-size: 20px; }
+  .tool-text h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .tool-text p { font-size: 11px; color: var(--dim); }
+
+  .badge-vibe { background: rgba(139,92,246,0.2); color: #c4b5fd; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+  .badge-real { background: rgba(6,182,212,0.2); color: #67e8f9; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -129,7 +153,7 @@
     </div>
   </div>
 
-  <!-- PAGE 2: VIDEO TO MUSIC (UPLOAD) -->
+  <!-- PAGE 2: VIDEO TO MUSIC -->
   <div class="page" id="page-audio">
     <h1 style="font-size:24px; font-weight:800; margin-bottom:8px;">Video to Music</h1>
     <p style="color:var(--dim); font-size:14px;">Convert video files from your gallery to 320kbps MP3.</p>
@@ -159,27 +183,63 @@
     </div>
   </div>
 
-  <!-- PAGE 3: INFO -->
+  <!-- PAGE 3: INFO & DEVELOPER -->
   <div class="page" id="page-info">
-    <h1 style="font-size:24px; font-weight:800; margin-bottom:8px;">How to Use</h1>
-    <p style="color:var(--dim); font-size:14px;">Read before downloading.</p>
+    <h1 style="font-size:24px; font-weight:800; margin-bottom:8px;">Developer & Tools</h1>
+    <p style="color:var(--dim); font-size:14px;">About the creator and the tech stack.</p>
 
-    <div class="feature-list">
-      <div class="feature-item">
-        <div class="feature-icon">📱</div>
-        <div>
-          <h4 style="font-size:14px; font-weight:600;">TikTok Supported</h4>
-          <p style="font-size:12px; color:var(--dim); margin-top:4px;">Paste TikTok link, click fetch, and save. Auto-merged for perfect quality.</p>
+    <!-- DEVELOPER CARD -->
+    <div class="dev-card">
+      <div class="dev-avatar">B</div>
+      <div class="dev-info">
+        <h2>Begie</h2>
+        <p>Age: <span>17</span> • Status: <span>Alright received</span></p>
+        <p style="margin-top: 6px; font-size: 11px; color: var(--dim);">Full Stack Dev & Automation Enthusiast.</p>
+      </div>
+    </div>
+
+    <!-- VIBE CODED TOOLS -->
+    <div class="tool-section">
+      <div class="tool-title">Vibe Coded Tools</div>
+      
+      <div class="tool-item">
+        <div class="tool-icon">🤖</div>
+        <div class="tool-text">
+          <h4>TikTok Downloader <span class="badge-vibe">Vibe</span></h4>
+          <p>Built with Python, yt-dlp, and a whole lot of trial & error.</p>
         </div>
       </div>
-      <div class="feature-item">
-        <div class="feature-icon">🎵</div>
-        <div>
-          <h4 style="font-size:14px; font-weight:600;">Gallery to MP3</h4>
-          <p style="font-size:12px; color:var(--dim); margin-top:4px;">Select any video file from your phone. The server will extract the audio in the highest possible quality.</p>
+      
+      <div class="tool-item">
+        <div class="tool-icon">🎨</div>
+        <div class="tool-text">
+          <h4>Glassmorphism UI <span class="badge-vibe">Vibe</span></h4>
+          <p>Mobile-first design with smooth animations and dark mode.</p>
         </div>
       </div>
     </div>
+
+    <!-- MY REAL TOOLS -->
+    <div class="tool-section">
+      <div class="tool-title">My Real Tools</div>
+
+      <div class="tool-item">
+        <div class="tool-icon">🎵</div>
+        <div class="tool-text">
+          <h4>FFmpeg Audio Engine <span class="badge-real">Custom</span></h4>
+          <p>Server-side processing to extract 320kbps MP3 from any video file.</p>
+        </div>
+      </div>
+
+      <div class="tool-item">
+        <div class="tool-icon">⚙️</div>
+        <div class="tool-text">
+          <h4>Stream Merger <span class="badge-real">Custom</span></h4>
+          <p>Forces H.264 + AAC encoding to ensure 100% Android compatibility.</p>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -208,7 +268,6 @@
     el.classList.add('active');
   }
 
-  // --- TIKTOK SCRIPT ---
   async function fetchTikTok() {
     const url = document.getElementById('ttUrl').value.trim();
     const btn = document.getElementById('ttBtn');
@@ -238,14 +297,12 @@
     }
   }
 
-  // --- MUSIC UPLOAD SCRIPT ---
   function fileSelected() {
     const fileInput = document.getElementById('videoFile');
     const fileLabel = document.getElementById('fileLabel');
     const file = fileInput.files[0];
     
     if (file) {
-      // Truncate long names
       let name = file.name;
       if(name.length > 20) name = name.substring(0, 17) + '...';
       fileLabel.innerHTML = `✅ ${name}`;

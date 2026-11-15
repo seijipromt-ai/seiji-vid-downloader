@@ -236,20 +236,17 @@
 
 </div>
 
-<!-- BOTTOM NAVIGATION (Inayos ang Icons) -->
+<!-- BOTTOM NAVIGATION -->
 <div class="bottom-nav">
   <div class="nav-item active" onclick="switchPage('tiktok', this)">
-    <!-- Video/Play Icon for TikTok -->
     <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
     TikTok
   </div>
   <div class="nav-item" onclick="switchPage('audio', this)">
-    <!-- Music Note Icon for Music -->
     <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
     Music
   </div>
   <div class="nav-item" onclick="switchPage('info', this)">
-    <!-- Info Icon -->
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
     Info
   </div>
@@ -270,12 +267,23 @@
     const resCard = document.getElementById('ttResult');
     if (!url) return;
 
-    btn.textContent = "Fetching..."; btn.disabled = true; err.style.display = 'none'; resCard.style.display = 'none';
+    btn.textContent = "Waking Server..."; 
+    btn.disabled = true; 
+    err.style.display = 'none'; 
+    resCard.style.display = 'none';
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
     try {
       const r = await fetch('/api/tiktok', {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ url })
+        method: 'POST', 
+        headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify({ url }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+
       const d = await r.json();
       if (!d.ok) throw new Error(d.err);
 
@@ -286,9 +294,15 @@
       
       resCard.style.display = 'block';
     } catch (e) {
-      err.textContent = e.message; err.style.display = 'block';
+      if (e.name === 'AbortError') {
+        err.textContent = "Server took too long to respond. Please try again.";
+      } else {
+        err.textContent = e.message;
+      }
+      err.style.display = 'block';
     } finally {
-      btn.textContent = "Fetch Video"; btn.disabled = false;
+      btn.textContent = "Fetch Video"; 
+      btn.disabled = false;
     }
   }
 
@@ -321,7 +335,7 @@
       return;
     }
 
-    btn.textContent = "Converting... (Please wait)"; 
+    btn.textContent = "Converting..."; 
     btn.disabled = true; 
     err.style.display = 'none'; 
     resCard.style.display = 'none';

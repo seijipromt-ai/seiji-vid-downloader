@@ -1,68 +1,78 @@
 import os
 import requests
+import yt_dlp
 from flask import Flask, request, jsonify, render_template, send_file, Response, stream_with_context
 import subprocess
 import uuid
 
 app = Flask(__name__)
 
-# Cobalt API Instance (Public)
-COBALT_API = "https://api.cobalt.tools/api/json"
-
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# --- UNIVERSAL EXTRACTOR (Video & Audio) ---
+# --- UNIVERSAL EXTRACTOR ---
 @app.route("/api/extract", methods=["POST"])
 def extract():
     data = request.get_json()
     url = data.get("url", "").strip()
-    media_type = data.get("type", "video") # 'video' or 'audio'
+    media_type = data.get("type", "video")
 
     if not url:
         return jsonify({"ok": False, "err": "URL is required."}), 400
 
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "url": url,
-        "isAudioOnly": media_type == "audio",
-        "vQuality": "720" # 720p is the sweet spot for mobile
-    }
-
-    try:
-        r = requests.post(COBALT_API, json=payload, headers=headers, timeout=20)
-        
-        if r.status_code != 200:
-            return jsonify({"ok": False, "err": "API busy or limit reached. Try again."}), 500
-
-        res_data = r.json()
-        
-        if res_data.get("status") == "error":
-            return jsonify({"ok": False, "err": res_data.get("text", "Failed to extract.")}), 400
+    # 1. TIKTOK SPECIFIC API (Mabilis at 100% reliable)
+    if "tiktok.com" in url:
+        try:
+            # TikWM API is free and doesn't require keys
+            api_url = f"https://tikwm.com/api/?url={url}"
+            r = requests.get(api_url, timeout=15).json()
             
-        direct_url = res_data.get("url")
+            if r.get("code") == 0 and "data" in r:
+                video_data = r["data"]
+                direct_url = video_data.get("play") # No watermark
+                title = video_data.get("title", "TikTok Video")
+                
+                return jsonify({
+                    "ok": True, 
+                    "data": {
+                        "title": title,
+                        "direct_url": direct_url
+                    }
+                })
+            else:
+                return jsonify({"ok": False, "err": "TikTok API failed to parse."}), 500
+        except Exception as e:
+            return jsonify({"ok": False, "err": f"TikTok Error: {str(e)}"}), 500
+
+    # 2. YOUTUBE / FACEBOOK / INSTAGRAM (yt-dlp logic)
+    else:
+        ydl_opts = {
+            'quiet': True,
+            'skip_download': True,
+            'format': 'best' if media_type == 'video' else 'bestaudio',
+        }
         
-        if not direct_url:
-            return jsonify({"ok": False, "err": "No media URL found."}), 400
-
-        # Return data to frontend
-        return jsonify({
-            "ok": True, 
-            "data": {
-                "title": res_data.get("filename", "Seiji Download"),
-                "direct_url": direct_url
-            }
-        })
-
-    except requests.exceptions.Timeout:
-        return jsonify({"ok": False, "err": "API Timeout. Please try again."}), 504
-    except Exception as e:
-        return jsonify({"ok": False, "err": str(e)}), 500
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                
+                # Get direct URL
+                direct_url = info.get('url')
+                if not direct_url and 'formats' in info:
+                    # Get the highest quality format
+                    formats = info['formats']
+                    direct_url = formats[-1]['url']
+                    
+                return jsonify({
+                    "ok": True, 
+                    "data": {
+                        "title": info.get('title', 'Media Download'),
+                        "direct_url": direct_url
+                    }
+                })
+        except Exception as e:
+            return jsonify({"ok": False, "err": f"Extractor Error: {str(e)}"}), 500
 
 # --- DIRECT PROXY DOWNLOADER ---
 @app.route("/api/download")
@@ -74,11 +84,16 @@ def download_proxy():
         return "No URL provided", 400
 
     try:
-        req = requests.get(target_url, stream=True)
+        # Bypass headers para hindi ma-block ng CDN
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.tiktok.com/"
+        }
         
-        # Determine extension
+        req = requests.get(target_url, stream=True, headers=headers)
+        
         ext = "mp4"
-        if "audio" in target_url or ".mp3" in target_url or "mime=audio" in target_url:
+        if "audio" in target_url or "mime=audio" in target_url or ".mp3" in target_url:
             ext = "mp3"
             mimetype = "audio/mpeg"
         else:
@@ -88,11 +103,9 @@ def download_proxy():
             for chunk in req.iter_content(chunk_size=1024*1024):
                 yield chunk
 
-        headers = {
+        return Response(stream_with_context(generate()), mimetype=mimetype, headers={
             "Content-Disposition": f'attachment; filename="{filename}.{ext}"'
-        }
-
-        return Response(stream_with_context(generate()), mimetype=mimetype, headers=headers)
+        })
 
     except Exception as e:
         return str(e), 500
@@ -118,7 +131,7 @@ def convert_audio():
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         if result.returncode != 0:
-            return jsonify({"ok": False, "err": "FFmpeg failed. Unsupported format."}), 500
+            return jsonify({"ok": False, "err": "FFmpeg failed."}), 500
 
         return jsonify({
             "ok": True, 
@@ -127,7 +140,6 @@ def convert_audio():
                 "filename": "seiji_audio"
             }
         })
-
     except Exception as e:
         return jsonify({"ok": False, "err": str(e)}), 500
     finally:

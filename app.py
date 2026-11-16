@@ -1,6 +1,7 @@
 import os
 import requests
 import yt_dlp
+import json
 from flask import Flask, request, jsonify, render_template, send_file, Response, stream_with_context
 import subprocess
 import uuid
@@ -21,58 +22,67 @@ def extract():
     if not url:
         return jsonify({"ok": False, "err": "URL is required."}), 400
 
-    # 1. TIKTOK SPECIFIC API (Mabilis at 100% reliable)
+    # ==========================================
+    # 1. TIKTOK (TikWM Primary -> yt-dlp Fallback)
+    # ==========================================
     if "tiktok.com" in url:
         try:
-            # TikWM API is free and doesn't require keys
+            # Try TikWM API
             api_url = f"https://tikwm.com/api/?url={url}"
-            r = requests.get(api_url, timeout=15).json()
+            # Naglagay tayo ng headers para hindi agad ma-flag
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            r = requests.get(api_url, headers=headers, timeout=10)
             
-            if r.get("code") == 0 and "data" in r:
-                video_data = r["data"]
-                direct_url = video_data.get("play") # No watermark
-                title = video_data.get("title", "TikTok Video")
-                
-                return jsonify({
-                    "ok": True, 
-                    "data": {
-                        "title": title,
-                        "direct_url": direct_url
-                    }
-                })
-            else:
-                return jsonify({"ok": False, "err": "TikTok API failed to parse."}), 500
-        except Exception as e:
-            return jsonify({"ok": False, "err": f"TikTok Error: {str(e)}"}), 500
-
-    # 2. YOUTUBE / FACEBOOK / INSTAGRAM (yt-dlp logic)
-    else:
-        ydl_opts = {
-            'quiet': True,
-            'skip_download': True,
-            'format': 'best' if media_type == 'video' else 'bestaudio',
-        }
-        
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                
-                # Get direct URL
-                direct_url = info.get('url')
-                if not direct_url and 'formats' in info:
-                    # Get the highest quality format
-                    formats = info['formats']
-                    direct_url = formats[-1]['url']
+            # Safe JSON parse. Kung hindi JSON, mag-e-error at dadaan sa except block
+            if r.status_code == 200:
+                res_json = r.json() 
+                if res_json.get("code") == 0 and "data" in res_json:
+                    v_data = res_json["data"]
+                    direct_url = v_data.get("play") if media_type == "video" else v_data.get("music")
                     
-                return jsonify({
-                    "ok": True, 
-                    "data": {
-                        "title": info.get('title', 'Media Download'),
-                        "direct_url": direct_url
-                    }
-                })
-        except Exception as e:
-            return jsonify({"ok": False, "err": f"Extractor Error: {str(e)}"}), 500
+                    if direct_url:
+                        return jsonify({
+                            "ok": True, 
+                            "data": {
+                                "title": v_data.get("title", "TikTok Media"),
+                                "direct_url": direct_url
+                            }
+                        })
+        except Exception:
+            # Kung nag-fail ang TikWM (blocked or down), dedretso tayo sa yt-dlp sa baba
+            pass 
+
+    # ==========================================
+    # 2. FALLBACK (yt-dlp for FB, YT, IG, and TikTok if TikWM fails)
+    # ==========================================
+    ydl_opts = {
+        'quiet': True,
+        'skip_download': True,
+        'nocheckcertificate': True,
+        'format': 'best' if media_type == 'video' else 'bestaudio',
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            direct_url = info.get('url')
+            if not direct_url and 'formats' in info:
+                formats = info['formats']
+                direct_url = formats[-1]['url']
+                
+            if not direct_url:
+                return jsonify({"ok": False, "err": "Could not find a valid video/audio stream."}), 404
+
+            return jsonify({
+                "ok": True, 
+                "data": {
+                    "title": info.get('title', 'Media Download'),
+                    "direct_url": direct_url
+                }
+            })
+    except Exception as e:
+        return jsonify({"ok": False, "err": f"Extractor Error: {str(e)}"}), 500
 
 # --- DIRECT PROXY DOWNLOADER ---
 @app.route("/api/download")
@@ -84,7 +94,6 @@ def download_proxy():
         return "No URL provided", 400
 
     try:
-        # Bypass headers para hindi ma-block ng CDN
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Referer": "https://www.tiktok.com/"

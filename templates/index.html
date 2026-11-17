@@ -1,473 +1,351 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<meta name="theme-color" content="#050508">
-<title>Seiji App</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #050508;
-    --panel: rgba(20, 20, 25, 0.6);
-    --line: rgba(255, 255, 255, 0.08);
-    --txt: #ffffff;
-    --dim: #9ca3af;
-    --accent: #8B5CF6;
-    --accent-glow: rgba(139, 92, 246, 0.4);
-    --cyan: #06B6D4;
-    --font: 'Plus Jakarta Sans', system-ui, sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  
-  body {
-    background: var(--bg); color: var(--txt); font-family: var(--font);
-    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
-  }
-
-  /* ANIMATED MESH BACKGROUND */
-  .bg-blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
-  .blob {
-    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5;
-    animation: floatBlob 15s infinite alternate ease-in-out;
-  }
-  .blob-1 { width: 350px; height: 350px; background: #4c1d95; top: -10%; left: -20%; animation-delay: 0s; }
-  .blob-2 { width: 300px; height: 300px; background: #0891b2; bottom: 0%; right: -20%; animation-delay: -5s; }
-  .blob-3 { width: 200px; height: 200px; background: #db2777; top: 40%; left: 40%; animation-delay: -10s; opacity: 0.3; }
-  
-  @keyframes floatBlob {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(40px, 60px) scale(1.2); }
-  }
-
-  /* HEADER */
-  .header { padding: 24px; display: flex; align-items: center; justify-content: center; }
-  .brand { 
-    font-size: 24px; font-weight: 800; letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #fff 30%, #a78bfa 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    animation: titleFade 0.8s ease-out;
-  }
-  @keyframes titleFade { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* PAGE CONTAINER */
-  .page-container { flex: 1; overflow-y: auto; padding: 0 24px 100px; position: relative; scroll-behavior: smooth; }
-  .page { display: none; }
-  .page.active { display: block; animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-  
-  @keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* UI ELEMENTS */
-  h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
-  .subtitle { color: var(--dim); font-size: 14px; margin-bottom: 24px; line-height: 1.4; }
-
-  .input-box { margin-top: 10px; display: flex; flex-direction: column; gap: 12px; }
-  
-  /* GLOWING INPUT */
-  .input-wrapper {
-    position: relative; background: rgba(0,0,0,0.4); border: 1px solid var(--line);
-    border-radius: 16px; transition: all 0.3s ease; display: flex; align-items: center; overflow: hidden;
-  }
-  .input-wrapper::before {
-    content: ''; position: absolute; inset: 0; border-radius: 16px; padding: 1px;
-    background: linear-gradient(45deg, transparent, var(--accent), transparent);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: 0.3s;
-  }
-  .input-wrapper:focus-within::before { opacity: 1; }
-  .input-wrapper:focus-within { box-shadow: 0 0 20px var(--accent-glow); border-color: transparent; }
-  
-  input[type="text"] {
-    width: 100%; background: transparent; border: none; color: #fff;
-    padding: 18px 20px; font-size: 15px; font-family: var(--font); outline: none;
-  }
-  input::placeholder { color: #6b7280; }
-
-  /* BUTTONS */
-  button {
-    position: relative; width: 100%; border: none; border-radius: 16px;
-    padding: 18px; font-size: 15px; font-weight: 700; font-family: var(--font);
-    color: #fff; cursor: pointer; overflow: hidden; transition: all 0.2s ease;
-    display: flex; justify-content: center; align-items: center; gap: 8px;
-  }
-  button:active { transform: scale(0.96); }
-  button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-  
-  .btn-primary { background: linear-gradient(135deg, var(--accent), #6d28d9); box-shadow: 0 4px 15px var(--accent-glow); }
-  .btn-cyan { background: linear-gradient(135deg, var(--cyan), #0891b2); box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3); }
-  .btn-green { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
-
-  /* FILE UPLOAD */
-  input[type="file"] { display: none; }
-  .file-upload {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; background: rgba(255,255,255,0.03); border: 2px dashed rgba(255,255,255,0.15);
-    color: var(--dim); padding: 30px 16px; border-radius: 16px; font-size: 14px;
-    font-weight: 600; cursor: pointer; transition: 0.3s; text-align: center;
-  }
-  .file-upload:active { background: rgba(255,255,255,0.08); }
-  .file-upload.selected { border-style: solid; border-color: var(--cyan); color: var(--cyan); background: rgba(6, 182, 212, 0.1); }
-
-  /* RESULT CARDS */
-  .result-card {
-    background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--line); border-radius: 20px; padding: 20px;
-    margin-top: 24px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  }
-  .result-card.show { display: block; animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-  @keyframes popIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
-
-  .res-flex { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; }
-  .res-icon { width: 60px; height: 60px; border-radius: 14px; background: rgba(139,92,246,0.15); display: flex; align-items: center; justify-content: center; font-size: 28px; }
-  .res-info { flex: 1; }
-  .res-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .res-desc { font-size: 13px; color: var(--dim); }
-  
-  .btn-dl {
-    display: flex; justify-content: center; align-items: center; gap: 8px;
-    width: 100%; background: rgba(255,255,255,0.05); color: #fff;
-    padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 600;
-    font-size: 14px; border: 1px solid var(--line); transition: 0.2s;
-  }
-  .btn-dl:active { background: rgba(255,255,255,0.1); transform: scale(0.98); }
-
-  /* ERROR */
-  .error { color: #ef4444; font-size: 13px; font-weight: 600; text-align: center; display: none; margin-top: 10px; animation: shake 0.4s; }
-  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-
-  /* BOTTOM NAV */
-  .bottom-nav {
-    position: fixed; bottom: 0; left: 0; right: 0; height: 75px;
-    background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--line); display: flex; justify-content: space-around;
-    align-items: center; padding-bottom: env(safe-area-inset-bottom); z-index: 100;
-  }
-  .nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    color: var(--dim); font-size: 10px; font-weight: 700; cursor: pointer; transition: 0.3s; width: 70px;
-  }
-  .nav-item svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: 0.3s; }
-  .nav-item.active { color: var(--accent); }
-  .nav-item.active svg { transform: translateY(-2px); filter: drop-shadow(0 2px 8px var(--accent-glow)); }
-
-  /* INFO PAGE */
-  .dev-card {
-    background: linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(6,182,212,0.15) 100%);
-    border: 1px solid rgba(139,92,246,0.3); border-radius: 20px;
-    padding: 24px; margin-top: 24px; display: flex; align-items: center; gap: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  }
-  .dev-avatar {
-    width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--cyan));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; font-weight: 800; color: #fff; box-shadow: 0 0 20px rgba(139,92,246,0.5);
-  }
-  .dev-info h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
-  .dev-info p { font-size: 13px; color: #ccc; font-weight: 500; }
-  .dev-info span { color: var(--cyan); font-weight: 700; }
-
-  .tool-section { margin-top: 32px; }
-  .tool-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--dim); margin-bottom: 16px; font-weight: 800; }
-  .tool-item { 
-    background: var(--panel); border: 1px solid var(--line); border-radius: 16px; 
-    padding: 16px 20px; margin-bottom: 12px; display: flex; gap: 16px; align-items: center; 
-  }
-  .tool-icon { font-size: 24px; }
-  .tool-text h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-  .tool-text p { font-size: 12px; color: var(--dim); line-height: 1.4; }
-
-  .badge-vibe { background: rgba(139,92,246,0.2); color: #c4b5fd; font-size: 10px; padding: 3px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
-  .badge-real { background: rgba(6,182,212,0.2); color: #67e8f9; font-size: 10px; padding: 3px 8px; border-radius: 6px; margin-left: 8px; vertical-align: middle; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050a10">
+  <meta name="description" content="SEIJI Vid Downloader — video, audio and media tools.">
+  <title>SEIJI — Vid Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#050a10; --panel:#091522; --panel-2:#0b1c2b;
+      --cyan:#00d9ff; --cyan-2:#00a9d6; --text:#f3f9ff;
+      --muted:#8ca5b8; --line:rgba(0,217,255,.2);
+      --glow:0 0 28px rgba(0,217,255,.18);
+      --font:'Plus Jakarta Sans',system-ui,sans-serif;
+      --display:'Orbitron',var(--font);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html{min-height:100%;background:var(--bg);scroll-behavior:smooth}
+    body{
+      min-height:100vh;min-height:100dvh;background:
+        radial-gradient(ellipse at 78% 12%,rgba(0,157,205,.15),transparent 34%),
+        radial-gradient(ellipse at 10% 45%,rgba(0,80,130,.12),transparent 36%),
+        linear-gradient(145deg,#03070c,#07111c 55%,#03080e);
+      color:var(--text);font-family:var(--font);overflow-x:hidden;
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.22;
+      background-image:linear-gradient(rgba(0,217,255,.045) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(0,217,255,.045) 1px,transparent 1px);
+      background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 85%);
+    }
+    button,input,a{font:inherit}
+    button{cursor:pointer}
+    .shell{position:relative;z-index:1;max-width:1180px;margin:auto;padding:0 24px 110px}
+    .topbar{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}
+    .brand-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--cyan);color:var(--cyan);
+      transform:skew(-12deg);font-family:var(--display);font-weight:800;font-size:19px;box-shadow:var(--glow)}
+    .brand-name{font:800 22px var(--display);letter-spacing:1px}
+    .brand-name span{color:var(--cyan)}
+    .top-links{display:flex;align-items:center;gap:26px}
+    .top-links a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:700;transition:.2s}
+    .top-links a:hover,.top-links a.active{color:var(--cyan)}
+    .version{border:1px solid var(--line);padding:8px 12px;border-radius:99px;color:var(--cyan);font-size:11px;font-weight:800;letter-spacing:1px}
+    .hero{display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:24px;padding:64px 0 38px;min-height:380px}
+    .eyebrow{color:var(--cyan);font-size:11px;font-weight:800;letter-spacing:4px;text-transform:uppercase;margin-bottom:18px}
+    h1{font:800 clamp(34px,6vw,66px)/1.04 var(--display);letter-spacing:-2px;margin-bottom:18px}
+    h1 span{display:block;color:var(--cyan);text-shadow:0 0 26px rgba(0,217,255,.25)}
+    .hero-copy{max-width:520px;color:#b5c8d8;font-size:15px;line-height:1.8}
+    .platforms{display:flex;flex-wrap:wrap;gap:9px;margin-top:24px}
+    .platform{border:1px solid var(--line);background:rgba(5,20,32,.7);border-radius:7px;padding:8px 11px;color:#b7d5e5;font-size:11px;font-weight:700}
+    .mascot-stage{height:290px;position:relative;display:grid;place-items:center;overflow:hidden;isolation:isolate}
+    .mascot-stage::before{content:"";position:absolute;width:245px;height:245px;border:1px solid rgba(0,217,255,.25);border-radius:50%;box-shadow:0 0 70px rgba(0,217,255,.13),inset 0 0 60px rgba(0,217,255,.08)}
+    .mascot-stage::after{content:"";position:absolute;width:310px;height:90px;border:1px solid rgba(0,217,255,.3);transform:rotate(-28deg);box-shadow:0 0 28px rgba(0,217,255,.14)}
+    .mascot{position:relative;z-index:1;width:min(100%,360px);height:280px;object-fit:cover;object-position:center 22%;border:1px solid rgba(0,217,255,.4);border-radius:18px;box-shadow:0 0 45px rgba(0,217,255,.22);mask-image:linear-gradient(to bottom,black 78%,transparent)}
+    .mascot-tag{position:absolute;right:5%;top:14%;font:700 11px var(--display);letter-spacing:3px;color:var(--cyan);writing-mode:vertical-rl}
+    .section-kicker{color:var(--cyan);font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;margin-bottom:9px}
+    .downloader{position:relative;margin:12px auto 34px;padding:2px;border:1px solid rgba(0,217,255,.55);
+      background:linear-gradient(135deg,rgba(0,217,255,.2),rgba(0,217,255,.02) 40%,rgba(0,217,255,.16));
+      clip-path:polygon(28px 0,calc(100% - 28px) 0,100% 28px,100% calc(100% - 28px),calc(100% - 28px) 100%,28px 100%,0 calc(100% - 28px),0 28px);
+      filter:drop-shadow(0 0 22px rgba(0,217,255,.12))}
+    .downloader-inner{background:linear-gradient(145deg,rgba(7,19,30,.98),rgba(3,10,17,.98));padding:25px 30px 30px;
+      clip-path:polygon(27px 0,calc(100% - 27px) 0,100% 27px,100% calc(100% - 27px),calc(100% - 27px) 100%,27px 100%,0 calc(100% - 27px),0 27px)}
+    .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:22px}
+    .tab{border:1px solid transparent;background:transparent;color:var(--muted);padding:13px 8px;border-radius:8px;font-size:13px;font-weight:800;transition:.2s}
+    .tab.active{color:var(--cyan);border-color:var(--line);background:linear-gradient(180deg,rgba(0,217,255,.14),rgba(0,217,255,.025));box-shadow:inset 0 -2px var(--cyan),0 0 18px rgba(0,217,255,.08)}
+    .panel{display:none}.panel.active{display:block;animation:rise .25s ease}
+    @keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+    .input-label{display:block;color:#b9cfdd;font-size:12px;font-weight:800;letter-spacing:1px;margin:2px 0 10px}
+    .url-row{display:flex;gap:10px}
+    .url-wrap{position:relative;z-index:2;isolation:isolate;display:flex;align-items:center;flex:1;min-width:0;border:1px solid rgba(0,217,255,.28);border-radius:12px;background:#06111c;transition:.2s}
+    .url-wrap:focus-within{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,217,255,.12),var(--glow)}
+    .url-icon{padding-left:16px;color:var(--cyan);font-size:19px;pointer-events:none}
+    .url-input{display:block;width:100%;min-width:0;min-height:58px;padding:14px 15px;background:transparent;border:0;outline:0;color:white;font-size:15px;caret-color:var(--cyan);
+      pointer-events:auto!important;touch-action:manipulation;user-select:text;-webkit-user-select:text}
+    .url-input::placeholder{color:#60798c}
+    .paste-btn{min-width:100px;border:1px solid rgba(180,215,235,.25);border-radius:11px;background:#0a1b2a;color:#d7eaf5;font-size:12px;font-weight:800}
+    .paste-btn:active,.action:active{transform:scale(.98)}
+    .action{width:100%;min-height:58px;margin-top:14px;border:0;border-radius:11px;background:linear-gradient(100deg,#00b8e5,#00e0ff);color:#001018;font-size:15px;font-weight:900;letter-spacing:.4px;box-shadow:0 8px 26px rgba(0,217,255,.2);transition:.2s}
+    .action:hover{filter:brightness(1.08);box-shadow:0 8px 32px rgba(0,217,255,.32)}
+    .action:disabled{opacity:.6;cursor:wait}
+    .error{display:none;margin-top:12px;padding:11px 13px;border:1px solid rgba(255,85,105,.3);border-radius:9px;background:rgba(255,60,80,.08);color:#ff9ba8;font-size:12px;line-height:1.5}
+    .result-card{display:none;margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:12px;background:rgba(0,217,255,.055)}
+    .result-card.show{display:block}
+    .result-title{font-weight:800;margin-bottom:5px;overflow-wrap:anywhere}
+    .result-desc{font-size:12px;color:var(--muted);margin-bottom:13px}
+    .btn-dl{display:flex;align-items:center;justify-content:center;min-height:46px;border:1px solid var(--cyan);border-radius:9px;color:var(--cyan);text-decoration:none;font-size:13px;font-weight:800}
+    .upload{display:block;width:100%;padding:28px 16px;border:1px dashed rgba(0,217,255,.42);border-radius:12px;background:rgba(0,217,255,.04);text-align:center;color:#b7d0df;font-size:13px;font-weight:700;cursor:pointer}
+    .upload.selected{border-style:solid;color:var(--cyan);background:rgba(0,217,255,.1)}
+    input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+    .features{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 44px}
+    .feature{min-height:135px;padding:20px 18px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(145deg,rgba(9,27,42,.92),rgba(4,12,20,.94));}
+    .feature-icon{font-size:23px;color:var(--cyan);margin-bottom:12px}
+    .feature h3{font-size:13px;margin-bottom:6px}.feature p{color:var(--muted);font-size:11px;line-height:1.6}
+    .info-card{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);margin-bottom:14px}
+    .info-card h2{font:700 17px var(--display);margin-bottom:8px}.info-card p{color:var(--muted);font-size:13px;line-height:1.7}
+    .footer{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:22px 0;border-top:1px solid var(--line);color:var(--muted);font-size:11px}
+    .footer strong{color:var(--cyan);font-family:var(--display);letter-spacing:2px}
+    .mobile-nav{display:none}
+    @media(max-width:760px){
+      .shell{padding:0 16px 105px}.topbar{height:65px}.top-links{gap:14px}.top-links a{font-size:11px}.version{font-size:9px;padding:7px 9px}
+      .hero{grid-template-columns:1fr;gap:4px;padding:42px 0 20px;min-height:auto}.hero-copy{font-size:13px;max-width:100%}
+      .mascot-stage{height:190px;grid-row:1}.mascot{width:min(100%,260px);height:185px}.mascot-stage::before{width:165px;height:165px}
+      h1{font-size:clamp(34px,10vw,52px)}.downloader-inner{padding:18px 14px 20px}
+      .tabs{gap:4px}.tab{font-size:11px;padding:12px 3px}.url-row{gap:7px}.paste-btn{min-width:72px;font-size:11px}
+      .url-input{font-size:14px;padding:12px 10px}.url-icon{padding-left:11px}
+      .features{grid-template-columns:repeat(2,1fr);gap:9px}.feature{min-height:120px;padding:15px}
+      .top-links a:nth-child(2){display:none}
+    }
+    @media(max-width:420px){
+      .brand-name{font-size:17px}.brand-mark{width:36px;height:36px}.version{display:none}
+      .tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.tab{font-size:10px}
+      .paste-btn{min-width:62px}.features{gap:8px}.feature h3{font-size:12px}
+      .footer{flex-direction:column;text-align:center}
+    }
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+  </style>
 </head>
 <body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="SEIJI home">
+        <span class="brand-mark">S</span><span class="brand-name">SEIJI<span>.</span></span>
+      </a>
+      <nav class="top-links" aria-label="Main navigation">
+        <a class="active" href="#home">HOME</a><a href="#tools">TOOLS</a><a href="#about">ABOUT</a>
+      </nav>
+      <span class="version">● V2.0</span>
+    </header>
 
-<!-- ANIMATED BACKGROUND -->
-<div class="bg-blobs">
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
-</div>
-
-<div class="header">
-  <div class="brand">SEIJI APP</div>
-</div>
-
-<div class="page-container">
-  
-  <!-- PAGE 1: VIDEO -->
-  <div class="page active" id="page-video">
-    <h1>Download Video</h1>
-    <div class="subtitle">TikTok, Facebook, IG, YouTube. No watermark, max quality.</div>
-    
-    <div class="input-box">
-      <div class="input-wrapper">
-        <input type="text" id="vidUrl" placeholder="Paste video link here..." />
-      </div>
-      <button id="vidBtn" class="btn-primary" onclick="fetchMedia('video')">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-        Fetch Video
-      </button>
-      <div class="error" id="vidErr"></div>
-    </div>
-
-    <div class="result-card" id="vidResult">
-      <div class="res-flex">
-        <div class="res-icon">🎬</div>
-        <div class="res-info">
-          <div class="res-title" id="vidTitle">Video Ready</div>
-          <div class="res-desc">MP4 Format • HD Quality</div>
+    <main id="home">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">FAST • SECURE • SIMPLE</div>
+          <h1>SEIJI <span>DOWNLOADER</span></h1>
+          <p class="hero-copy">Download videos and audio from supported platforms with a clean, simple workflow. Paste a link, fetch the media, and save it to your device.</p>
+          <div class="platforms"><span class="platform">YOUTUBE</span><span class="platform">TIKTOK</span><span class="platform">FACEBOOK</span><span class="platform">INSTAGRAM*</span></div>
         </div>
-      </div>
-      <a href="#" id="vidDl" class="btn-dl">Save to Gallery</a>
-    </div>
-  </div>
-
-  <!-- PAGE 2: AUDIO -->
-  <div class="page" id="page-audio">
-    <h1>Download Audio</h1>
-    <div class="subtitle">Extract high-quality MP3 from any video link.</div>
-    
-    <div class="input-box">
-      <div class="input-wrapper">
-        <input type="text" id="audUrl" placeholder="Paste link for MP3..." />
-      </div>
-      <button id="audBtn" class="btn-cyan" onclick="fetchMedia('audio')">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        Fetch Audio
-      </button>
-      <div class="error" id="audErr"></div>
-    </div>
-
-    <div class="result-card" id="audResult">
-      <div class="res-flex">
-        <div class="res-icon" style="background: rgba(6,182,212,0.15);">🎵</div>
-        <div class="res-info">
-          <div class="res-title" id="audTitle">Audio Ready</div>
-          <div class="res-desc">MP3 Format • High Quality</div>
+        <div class="mascot-stage" aria-label="SEIJI mascot graphic">
+          <img class="mascot" src="/static/seiji_mascot.png" alt="SEIJI anime mascot"><span class="mascot-tag">INTERNAL / MEDIA SYSTEM</span>
         </div>
-      </div>
-      <a href="#" id="audDl" class="btn-dl">Save to Phone</a>
-    </div>
-  </div>
+      </section>
 
-  <!-- PAGE 3: CONVERT -->
-  <div class="page" id="page-convert">
-    <h1>Convert to MP3</h1>
-    <div class="subtitle">Select a video from your gallery to extract 320kbps audio.</div>
-    
-    <div class="input-box">
-      <input type="file" id="videoFile" accept="video/*" onchange="fileSelected()" />
-      <label for="videoFile" class="file-upload" id="fileLabel">
-        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-        Tap to select video
-      </label>
-      
-      <button id="convBtn" class="btn-green" onclick="uploadAudio()">
-        Convert to MP3
-      </button>
-      <div class="error" id="convErr"></div>
-    </div>
+      <section class="downloader" id="tools" aria-label="Downloader tools">
+        <div class="downloader-inner">
+          <div class="section-kicker">MEDIA CONSOLE / 01</div>
+          <div class="tabs" role="tablist" aria-label="Media tools">
+            <button class="tab active" role="tab" aria-selected="true" data-tab="video">▶ Video</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="audio">♫ Audio</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="convert">⇄ Convert</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="info">ⓘ Info</button>
+          </div>
 
-    <div class="result-card" id="convResult">
-      <div class="res-flex">
-        <div class="res-icon" style="background: rgba(16,185,129,0.15); color:#10B981;">💾</div>
-        <div class="res-info">
-          <div class="res-title">Conversion Complete</div>
-          <div class="res-desc">MP3 Format • 320kbps</div>
+          <section class="panel active" id="panel-video" role="tabpanel">
+            <label class="input-label" for="vidUrl">VIDEO URL</label>
+            <div class="url-row">
+              <div class="url-wrap"><span class="url-icon">↗</span><input class="url-input" type="url" id="vidUrl" placeholder="Paste video URL here..." inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false"></div>
+              <button class="paste-btn" type="button" onclick="pasteInto('vidUrl')">▣ Paste</button>
+            </div>
+            <button id="vidBtn" class="action" type="button" onclick="fetchMedia('video')">↓ &nbsp; FETCH VIDEO</button>
+            <div class="error" id="vidErr" role="alert"></div>
+            <div class="result-card" id="vidResult"><div class="result-title" id="vidTitle">Video ready</div><div class="result-desc">Video stream found • Ready to save</div><a href="#" id="vidDl" class="btn-dl">↓ &nbsp; SAVE VIDEO</a></div>
+          </section>
+
+          <section class="panel" id="panel-audio" role="tabpanel">
+            <label class="input-label" for="audUrl">AUDIO SOURCE URL</label>
+            <div class="url-row">
+              <div class="url-wrap"><span class="url-icon">♫</span><input class="url-input" type="url" id="audUrl" placeholder="Paste audio/video URL here..." inputmode="url" autocomplete="url" autocapitalize="off" spellcheck="false"></div>
+              <button class="paste-btn" type="button" onclick="pasteInto('audUrl')">▣ Paste</button>
+            </div>
+            <button id="audBtn" class="action" type="button" onclick="fetchMedia('audio')">♫ &nbsp; FETCH AUDIO</button>
+            <div class="error" id="audErr" role="alert"></div>
+            <div class="result-card" id="audResult"><div class="result-title" id="audTitle">Audio ready</div><div class="result-desc">Audio stream found • Ready to save</div><a href="#" id="audDl" class="btn-dl">↓ &nbsp; SAVE AUDIO</a></div>
+          </section>
+
+          <section class="panel" id="panel-convert" role="tabpanel">
+            <label class="input-label" for="videoFile">VIDEO FILE</label>
+            <input type="file" id="videoFile" accept="video/*" onchange="fileSelected()">
+            <label for="videoFile" class="upload" id="fileLabel">＋ &nbsp; TAP TO SELECT A VIDEO FROM YOUR DEVICE</label>
+            <button id="convBtn" class="action" type="button" onclick="uploadAudio()">⇄ &nbsp; CONVERT TO MP3</button>
+            <div class="error" id="convErr" role="alert"></div>
+            <div class="result-card" id="convResult"><div class="result-title">Conversion complete</div><div class="result-desc">Your MP3 file is ready.</div><a href="#" id="convDl" class="btn-dl">↓ &nbsp; SAVE MP3</a></div>
+          </section>
+
+          <section class="panel" id="panel-info" role="tabpanel">
+            <div class="info-card"><div class="section-kicker">ABOUT THE PROJECT</div><h2>SEIJI VID DOWNLOADER</h2><p>A lightweight media utility powered by the project's existing Flask API, yt-dlp and FFmpeg conversion endpoint.</p></div>
+            <div class="info-card"><h2>Supported workflow</h2><p>Video extraction • Audio extraction • Local video-to-MP3 conversion. Availability depends on the source platform and its current restrictions.</p></div>
+          </section>
         </div>
-      </div>
-      <a href="#" id="convDl" class="btn-dl">Save Music</a>
-    </div>
+      </section>
+
+      <section class="features" aria-label="Features">
+        <article class="feature"><div class="feature-icon">ϟ</div><h3>FAST WORKFLOW</h3><p>Simple link-to-result flow with clear loading feedback.</p></article>
+        <article class="feature"><div class="feature-icon">⬡</div><h3>ONE CLEAN UI</h3><p>Video, audio and conversion tools in one place.</p></article>
+        <article class="feature"><div class="feature-icon">▣</div><h3>MOBILE READY</h3><p>Touch-friendly controls and responsive layouts.</p></article>
+        <article class="feature"><div class="feature-icon">◇</div><h3>CYAN EDITION</h3><p>SEIJI's signature black and neon-cyan identity.</p></article>
+      </section>
+
+      <footer class="footer" id="about"><span><strong>SEIJI INTERNAL</strong> &nbsp; MEDIA TOOLS</span><span>Black • Cyan • Built for simplicity</span></footer>
+    </main>
   </div>
 
-  <!-- PAGE 4: INFO -->
-  <div class="page" id="page-info">
-    <h1>Developer & Tools</h1>
-    <div class="subtitle">About the creator and the tech stack.</div>
-
-    <div class="dev-card">
-      <div class="dev-avatar">B</div>
-      <div class="dev-info">
-        <h2>Begie</h2>
-        <p>Age: <span>17</span> • Status: <span>Alright received</span></p>
-        <p style="margin-top: 6px; font-size: 12px; color: var(--dim);">Full Stack Dev & Automation Enthusiast.</p>
-      </div>
-    </div>
-
-    <div class="tool-section">
-      <div class="tool-title">Vibe Coded Tools</div>
-      
-      <div class="tool-item">
-        <div class="tool-icon">🤖</div>
-        <div class="tool-text">
-          <h4>API Extractor <span class="badge-vibe">Vibe</span></h4>
-          <p>High-speed extraction engine tailored for social media.</p>
-        </div>
-      </div>
-      
-      <div class="tool-item">
-        <div class="tool-icon">🎨</div>
-        <div class="tool-text">
-          <h4>Glassmorphism UI <span class="badge-vibe">Vibe</span></h4>
-          <p>Modern, mobile-first aesthetic with fluid animations.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="tool-section">
-      <div class="tool-title">My Real Tools</div>
-
-      <div class="tool-item">
-        <div class="tool-icon">🎵</div>
-        <div class="tool-text">
-          <h4>FFmpeg Audio Engine <span class="badge-real">Custom</span></h4>
-          <p>Server-side processing to extract 320kbps MP3.</p>
-        </div>
-      </div>
-
-      <div class="tool-item">
-        <div class="tool-icon">⚙️</div>
-        <div class="tool-text">
-          <h4>Stream Transcoder <span class="badge-real">Custom</span></h4>
-          <p>Forces H.264 + AAC encoding for Android compatibility.</p>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-</div>
-
-<!-- BOTTOM NAV -->
-<div class="bottom-nav">
-  <div class="nav-item active" onclick="switchPage('video', this)">
-    <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
-    Video
-  </div>
-  <div class="nav-item" onclick="switchPage('audio', this)">
-    <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-    Audio
-  </div>
-  <div class="nav-item" onclick="switchPage('convert', this)">
-    <svg viewBox="0 0 24 24"><path d="M4 4v16h16V4H4zm7 11h-2v-4H7l5-5 5 5h-2v4h-2z"/></svg>
-    Convert
-  </div>
-  <div class="nav-item" onclick="switchPage('info', this)">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-    Info
-  </div>
-</div>
-
-<script>
-  function switchPage(pageId, el) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + pageId).classList.add('active');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    el.classList.add('active');
-  }
-
-  async function fetchMedia(type) {
-    const isVid = type === 'video';
-    const url = document.getElementById(isVid ? 'vidUrl' : 'audUrl').value.trim();
-    const btn = document.getElementById(isVid ? 'vidBtn' : 'audBtn');
-    const err = document.getElementById(isVid ? 'vidErr' : 'audErr');
-    const resCard = document.getElementById(isVid ? 'vidResult' : 'audResult');
-    
-    if (!url) return;
-
-    btn.innerHTML = "Extracting..."; 
-    btn.disabled = true; 
-    err.style.display = 'none'; 
-    resCard.classList.remove('show');
-
-    try {
-      const r = await fetch('/api/extract', {
-        method: 'POST', 
-        headers: {'Content-Type': 'application/json'}, 
-        body: JSON.stringify({ url: url, type: type })
+  <script>
+    // Tab navigation
+    document.querySelectorAll('[data-tab]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const id = tab.dataset.tab;
+        document.querySelectorAll('[data-tab]').forEach(item => {
+          const active = item === tab;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-selected', String(active));
+        });
+        document.querySelectorAll('.panel').forEach(panel => {
+          panel.classList.toggle('active', panel.id === `panel-${id}`);
+        });
       });
-      
-      const d = await r.json();
-      if (!d.ok) throw new Error(d.err);
+    });
 
-      const dlLink = document.getElementById(isVid ? 'vidDl' : 'audDl');
-      dlLink.href = `/api/download?url=${encodeURIComponent(d.data.direct_url)}&filename=seiji_${type}`;
-      
-      resCard.classList.add('show');
-    } catch (e) {
-      err.textContent = e.message;
-      err.style.display = 'block';
-    } finally {
-      if (isVid) {
-        btn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Fetch Video`;
-      } else {
-        btn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Fetch Audio`;
+    async function pasteInto(inputId) {
+      const input = document.getElementById(inputId);
+      try {
+        if (!navigator.clipboard?.readText) throw new Error('Clipboard access unavailable');
+        const value = await navigator.clipboard.readText();
+        if (value) {
+          input.value = value.trim();
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.focus();
+        }
+      } catch {
+        input.focus();
+        showInlineHint(inputId, 'Long-press the field and choose Paste.');
       }
-      btn.disabled = false;
-    }
-  }
-
-  function fileSelected() {
-    const fileInput = document.getElementById('videoFile');
-    const fileLabel = document.getElementById('fileLabel');
-    const file = fileInput.files[0];
-    
-    if (file) {
-      let name = file.name;
-      if(name.length > 18) name = name.substring(0, 15) + '...';
-      fileLabel.innerHTML = `✅ ${name}`;
-      fileLabel.classList.add('selected');
-    } else {
-      fileLabel.innerHTML = `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Tap to select video`;
-      fileLabel.classList.remove('selected');
-    }
-  }
-
-  async function uploadAudio() {
-    const fileInput = document.getElementById('videoFile');
-    const file = fileInput.files[0];
-    const btn = document.getElementById('convBtn');
-    const err = document.getElementById('convErr');
-    const resCard = document.getElementById('convResult');
-    
-    if (!file) {
-      err.textContent = "Please select a video file first.";
-      err.style.display = 'block';
-      return;
     }
 
-    btn.textContent = "Converting... Please wait"; 
-    btn.disabled = true; 
-    err.style.display = 'none'; 
-    resCard.classList.remove('show');
-
-    const formData = new FormData();
-    formData.append('video', file);
-
-    try {
-      const r = await fetch('/api/convert-audio', {
-        method: 'POST',
-        body: formData
-      });
-      const d = await r.json();
-      
-      if (!d.ok) throw new Error(d.err);
-
-      document.getElementById('convDl').href = d.data.download_url;
-      resCard.classList.add('show');
-    } catch (e) {
-      err.textContent = e.message; 
-      err.style.display = 'block';
-    } finally {
-      btn.textContent = "Convert to MP3"; 
-      btn.disabled = false;
+    function showInlineHint(inputId, message) {
+      const panel = document.getElementById(inputId === 'vidUrl' ? 'panel-video' : 'panel-audio');
+      let hint = panel.querySelector('.paste-hint');
+      if (!hint) {
+        hint = document.createElement('div');
+        hint.className = 'paste-hint';
+        hint.style.cssText = 'margin-top:8px;color:#8ca5b8;font-size:11px';
+        panel.querySelector('.url-row').after(hint);
+      }
+      hint.textContent = message;
     }
-  }
-</script>
+
+    async function fetchMedia(type) {
+      const isVid = type === 'video';
+      const input = document.getElementById(isVid ? 'vidUrl' : 'audUrl');
+      const url = input.value.trim();
+      const btn = document.getElementById(isVid ? 'vidBtn' : 'audBtn');
+      const err = document.getElementById(isVid ? 'vidErr' : 'audErr');
+      const resCard = document.getElementById(isVid ? 'vidResult' : 'audResult');
+      const title = document.getElementById(isVid ? 'vidTitle' : 'audTitle');
+
+      err.style.display = 'none';
+      resCard.classList.remove('show');
+      if (!url) {
+        err.textContent = 'Please paste a media URL first.';
+        err.style.display = 'block';
+        input.focus();
+        return;
+      }
+      try {
+        new URL(url);
+      } catch {
+        err.textContent = 'Please enter a valid URL, including https://';
+        err.style.display = 'block';
+        input.focus();
+        return;
+      }
+
+      const original = isVid ? '↓  FETCH VIDEO' : '♫  FETCH AUDIO';
+      btn.disabled = true;
+      btn.textContent = 'EXTRACTING...';
+      try {
+        const response = await fetch('/api/extract', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({url, type})
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.err || 'Unable to extract this media.');
+        title.textContent = data.data.title || (isVid ? 'Video ready' : 'Audio ready');
+        document.getElementById(isVid ? 'vidDl' : 'audDl').href =
+          `/api/download?url=${encodeURIComponent(data.data.direct_url)}&filename=seiji_${type}`;
+        resCard.classList.add('show');
+      } catch (error) {
+        err.textContent = error.message || 'Something went wrong. Please try again.';
+        err.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    function fileSelected() {
+      const input = document.getElementById('videoFile');
+      const label = document.getElementById('fileLabel');
+      const file = input.files && input.files[0];
+      if (file) {
+        label.textContent = `✓  ${file.name}`;
+        label.classList.add('selected');
+      } else {
+        label.textContent = '＋  TAP TO SELECT A VIDEO FROM YOUR DEVICE';
+        label.classList.remove('selected');
+      }
+    }
+
+    async function uploadAudio() {
+      const fileInput = document.getElementById('videoFile');
+      const file = fileInput.files && fileInput.files[0];
+      const btn = document.getElementById('convBtn');
+      const err = document.getElementById('convErr');
+      const resCard = document.getElementById('convResult');
+      err.style.display = 'none';
+      resCard.classList.remove('show');
+
+      if (!file) {
+        err.textContent = 'Please select a video file first.';
+        err.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'CONVERTING... PLEASE WAIT';
+      const formData = new FormData();
+      formData.append('video', file);
+
+      try {
+        const response = await fetch('/api/convert-audio', {method:'POST', body:formData});
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.err || 'Conversion failed.');
+        document.getElementById('convDl').href = data.data.download_url;
+        resCard.classList.add('show');
+      } catch (error) {
+        err.textContent = error.message || 'Conversion failed. Please try again.';
+        err.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⇄  CONVERT TO MP3';
+      }
+    }
+  </script>
 </body>
 </html>

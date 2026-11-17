@@ -1,4 +1,5 @@
+
 Flask==3.0.3
 requests==2.32.3
-yt-dlp
+yt-dlp[default]==2026.10.26
 gunicorn==21.2.0
